@@ -1,0 +1,20 @@
+﻿#Set base image from debian:stretch slim with R and python3 for running scRNAseq workflow on RIS compute1
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends vim clangd libhdf5-dev r-base r-base-dev git python3 python3-pip && apt-get clean
+
+RUN pip3 install --no-cache-dir -U setuptools && pip3 install --no-cache-dir -U scvelo
+
+RUN git clone https://github.com/emnehls/SH_scRNAseq.git
+#RUN R -e "install.packages('remotes', dependencies=TRUE, repos='http://cran.rstudio.com/')"
+#RUN R -e "remotes::isntall_github('mojaveazure/seurat-disk')"
+# RUN git clone
+
+LSF_DOCKER_VOLUMES='/home/emnehls:/home/emnehls /storage1/fs1/stallings/Active:/storage1/fs1/stallings/Active' PATH=/home/emnehls:$PATH LSF_DOCKER_PORTS='8000:8787' bsub -q general -oo $HOME/output_%J.txt -eo $HOME/error_%J.txt -N -R 'select[port8000=1] rusage[mem=80GB]' -G compute-stallings -a 'docker(emnehls/scrnaseq_rstudio:latest)' /bin/bash rstudio.sh 
+
+#!/bin/bash rstudio-server start 
+
+LSF_DOCKER_VOLUMES='/home/emnehls:/home/emnehls /storage1/fs1/stallings/Active:/storage1/fs1/stallings/Active' PATH=/home/emnehls:$PATH LSF_DOCKER_PORTS='8000:8787' bsub -n 4 -q general -oo $HOME/output_%J.txt -eo $HOME/error_%J.txt -N -R 'select[port8000=1] rusage[mem=80GB] span[hosts=1]' -G compute-stallings -a 'docker(emnehls/scrnaseq_rstudio:latest)' /bin/bash rstudio.sh 
+
